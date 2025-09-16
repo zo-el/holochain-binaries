@@ -265,44 +265,44 @@ jobs:
 
           gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-apple-darwin"
 
-      # - name: setup binaries (x86_64-unknown-linux-gnu)
-      #   if: matrix.platform == 'ubuntu-22.04' && inputs.x86_64-unknown-linux-gnu == true
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #     # Create a temporary Cargo.toml with patch dependencies
-      #     mkdir temp-holochain-build-x86_64
-      #     cd temp-holochain-build-x86_64
+      - name: setup binaries (x86_64-unknown-linux-gnu)
+        if: matrix.platform == 'ubuntu-22.04' && inputs.x86_64-unknown-linux-gnu == true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a temporary Cargo.toml with patch dependencies
+          mkdir temp-holochain-build-x86_64
+          cd temp-holochain-build-x86_64
 
-      #     cat > Cargo.toml << 'EOF'
-      #     [package]
-      #     name = "temp-holochain-build"
-      #     version = "0.1.0"
-      #     edition = "2021"
+          cat > Cargo.toml << 'EOF'
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
 
-      #     [dependencies]
-      #     holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
 
-      #     [patch.crates-io]
-      #     wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
-      #     wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
-      #     kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
-      #     EOF
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          EOF
 
-      #     # Install holochain binary with patches applied
-      #     cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
-      #     HOLOCHAIN_PATH=$(which holochain)
-      #     cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
-      #     cd ..
+          # Install holochain binary with patches applied
+          cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          HOLOCHAIN_PATH=$(which holochain)
+          cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
+          cd ..
 
-      #     shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
 
-      #     gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu"
 
       - name: setup binaries (aarch64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.aarch64-unknown-linux-gnu == true
