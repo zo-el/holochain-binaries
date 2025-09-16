@@ -90,11 +90,15 @@ jobs:
       - name: Get patch commit hashes (Windows)
         if: matrix.platform == 'windows-2022'
         id: get_hashes_windows
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $wasmerHash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86").object.sha.Substring(0,8)
+          $headers = @{ Authorization = "Bearer $env:GITHUB_TOKEN" }
+
+          $wasmerHash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86" -Headers $headers).object.sha.Substring(0,8)
           echo "wasmer_hash=$wasmerHash" >> $env:GITHUB_OUTPUT
 
-          $kitsune2Hash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport").object.sha.Substring(0,8)
+          $kitsune2Hash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport" -Headers $headers).object.sha.Substring(0,8)
           echo "kitsune2_hash=$kitsune2Hash" >> $env:GITHUB_OUTPUT
 
           echo "Wasmer hash: $wasmerHash"
@@ -104,11 +108,13 @@ jobs:
       - name: Get patch commit hashes (Unix)
         if: matrix.platform != 'windows-2022'
         id: get_hashes_unix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wasmer_hash=$(curl -s "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86" | jq -r '.object.sha' | cut -c1-8)
+          wasmer_hash=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86" | jq -r '.object.sha' | cut -c1-8)
           echo "wasmer_hash=$wasmer_hash" >> $GITHUB_OUTPUT
 
-          kitsune2_hash=$(curl -s "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport" | jq -r '.object.sha' | cut -c1-8)
+          kitsune2_hash=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport" | jq -r '.object.sha' | cut -c1-8)
           echo "kitsune2_hash=$kitsune2_hash" >> $GITHUB_OUTPUT
 
           echo "Wasmer hash: $wasmer_hash"
@@ -144,7 +150,8 @@ jobs:
           kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
           "@ | Out-File -FilePath Cargo.toml -Encoding utf8
 
-          cargo install --path . --bin holochain --locked
+          # Install holochain binary with patches applied
+          cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           $HcPath = Get-Command holochain | Select-Object -ExpandProperty Definition
           Copy-Item $HcPath -Destination ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe
           Set-Location ..
@@ -184,7 +191,8 @@ jobs:
           kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
           EOF
 
-          cargo install --path . --bin holochain --target aarch64-apple-darwin --locked
+          # Install holochain binary with patches applied
+          cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
           cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-apple-darwin
           cd ..
@@ -224,7 +232,8 @@ jobs:
           kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
           EOF
 
-          cargo install --path . --bin holochain --target x86_64-apple-darwin --locked
+          # Install holochain binary with patches applied
+          cargo install holochain --version ${{ inputs.holochain-version }} --target x86_64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
           cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-apple-darwin
           cd ..
@@ -262,7 +271,8 @@ jobs:
           kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
           EOF
 
-          cargo install --path . --bin holochain --locked
+          # Install holochain binary with patches applied
+          cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
           cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
           cd ..
@@ -313,7 +323,8 @@ jobs:
           kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
           EOF
 
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc SODIUM_DIST_DIR="$(pwd)/../libsodium" cargo install --path . --bin holochain --target aarch64-unknown-linux-gnu --locked
+          # Install holochain binary with patches applied
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc SODIUM_DIST_DIR="$(pwd)/../libsodium" cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-unknown-linux-gnu --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
           cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
           cd ..
