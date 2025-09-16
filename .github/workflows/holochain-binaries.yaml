@@ -71,14 +71,6 @@ jobs:
         with:
           node-version: 20
 
-      - id: create-release
-        uses: ncipollo/release-action@v1
-        with:
-          body: "Holochain binaries for Linux/Windows/macOS with patched wasmer and kitsune2 dependencies."
-          prerelease: true
-          skipIfReleaseExists: true
-          tag: holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}
-
       - name: install Rust
         uses: dtolnay/rust-toolchain@1.87.0
 
@@ -132,6 +124,15 @@ jobs:
             echo "kitsune2_hash=${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" >> $GITHUB_OUTPUT
           fi
         shell: bash
+
+      - id: create-release
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: ncipollo/release-action@v1
+        with:
+          body: "Holochain binaries for Linux/Windows/macOS with patched wasmer and kitsune2 dependencies."
+          prerelease: true
+          skipIfReleaseExists: true
+          tag: holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}
 
       - name: setup binaries (x86_64-pc-windows-msvc)
         if: matrix.platform == 'windows-2022' && inputs.x86_64-pc-windows-msvc == true
