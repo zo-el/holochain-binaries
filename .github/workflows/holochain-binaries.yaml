@@ -77,7 +77,7 @@ jobs:
           body: "Holochain binaries for Linux/Windows/macOS with patched wasmer and kitsune2 dependencies."
           prerelease: true
           skipIfReleaseExists: true
-          tag: holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash || steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash || steps.get_hashes_unix.outputs.kitsune2_hash }}
+          tag: holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}
 
       - name: install Rust
         uses: dtolnay/rust-toolchain@1.87.0
@@ -121,6 +121,18 @@ jobs:
           echo "Kitsune2 hash: $kitsune2_hash"
         shell: bash
 
+      - name: Set unified hashes
+        id: hashes
+        run: |
+          if [[ "${{ matrix.platform }}" == "windows-2022" ]]; then
+            echo "wasmer_hash=${{ steps.get_hashes_windows.outputs.wasmer_hash }}" >> $GITHUB_OUTPUT
+            echo "kitsune2_hash=${{ steps.get_hashes_windows.outputs.kitsune2_hash }}" >> $GITHUB_OUTPUT
+          else
+            echo "wasmer_hash=${{ steps.get_hashes_unix.outputs.wasmer_hash }}" >> $GITHUB_OUTPUT
+            echo "kitsune2_hash=${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
       - name: setup binaries (x86_64-pc-windows-msvc)
         if: matrix.platform == 'windows-2022' && inputs.x86_64-pc-windows-msvc == true
         env:
@@ -153,12 +165,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           $HcPath = Get-Command holochain | Select-Object -ExpandProperty Definition
-          Copy-Item $HcPath -Destination ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe
+          Copy-Item $HcPath -Destination ../holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe
           Set-Location ..
 
-          CertUtil -hashfile "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe" SHA256
+          CertUtil -hashfile "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe" SHA256
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_windows.outputs.wasmer_hash }}-k${{ steps.get_hashes_windows.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe"
 
       - name: setup binaries (aarch64-apple-darwin)
         if: matrix.platform == 'macos-latest' && inputs.aarch64-apple-darwin == true
@@ -194,12 +206,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin
           cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin"
 
       - name: setup binaries (x86_64-apple-darwin)
         if: matrix.platform == 'macos-13' && inputs.x86_64-apple-darwin == true
@@ -235,12 +247,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --target x86_64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin
           cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin"
 
       - name: setup binaries (x86_64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.x86_64-unknown-linux-gnu == true
@@ -274,12 +286,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
           cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu"
 
       - name: setup binaries (aarch64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.aarch64-unknown-linux-gnu == true
@@ -326,9 +338,9 @@ jobs:
           # Install holochain binary with patches applied
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc SODIUM_DIST_DIR="$(pwd)/../libsodium" cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-unknown-linux-gnu --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
           cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes_unix.outputs.wasmer_hash }}-k${{ steps.get_hashes_unix.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.hashes.outputs.wasmer_hash }}-k${{ steps.hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu"
