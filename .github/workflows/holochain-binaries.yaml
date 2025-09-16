@@ -135,7 +135,11 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         uses: ncipollo/release-action@v1
         with:
-          body: "Holochain binaries for Linux/Windows/macOS with patched wasmer and kitsune2 dependencies."
+          body: |
+            Holochain binaries for Linux/Windows/macOS with patched wasmer and kitsune2 dependencies.
+            Holochain version: ${{ inputs.holochain-version }}
+            Wasmer hash: ${{ steps.hashes.outputs.wasmer_hash }}
+            Kitsune2 hash: ${{ steps.hashes.outputs.kitsune2_hash }}
           prerelease: true
           skipIfReleaseExists: true
           tag: holochain-binaries-${{ steps.version.outputs.full_version }}
