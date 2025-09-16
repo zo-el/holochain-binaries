@@ -1,7 +1,7 @@
 name: Check for new releases
 on:
   schedule:
-    - cron:  '0 * * * *'
+    - cron: "0 * * * *"
   push:
     branches:
       - main
@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Check for new holochain releases
         id: check_releases
         run: |
@@ -30,14 +30,13 @@ jobs:
     with:
       holochain-version: ${{ needs.check-new-04-releases.outputs.holochain-version }}
 
-
   check-new-05-releases:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Check for new holochain releases
         id: check_releases
         run: |
@@ -60,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Check for new holochain releases
         id: check_releases
         run: |
@@ -77,72 +76,74 @@ jobs:
     with:
       holochain-version: ${{ needs.check-new-06-releases.outputs.holochain-version }}
 
+  # DISABLED: Only building holochain binaries now
+  # check-new-lair-releases:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - name: Check for new lair releases
+  #       id: check_releases
+  #       run: |
+  #         echo "lair_version=$(node ./scripts/check-new-lair-releases.mjs)" >> $GITHUB_OUTPUT
+  #   outputs:
+  #     lair-version: ${{ steps.check_releases.outputs.lair_version }}
 
-  check-new-lair-releases:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Check for new lair releases
-        id: check_releases
-        run: |
-          echo "lair_version=$(node ./scripts/check-new-lair-releases.mjs)" >> $GITHUB_OUTPUT
-    outputs:
-      lair-version: ${{ steps.check_releases.outputs.lair_version }}
+  # build-lair-binaries:
+  #   permissions:
+  #     contents: write
+  #   needs: check-new-lair-releases
+  #   if: ${{ needs.check-new-lair-releases.outputs.lair-version }}
+  #   uses: ./.github/workflows/lair-binaries.yaml
+  #   with:
+  #     lair-version: ${{ needs.check-new-lair-releases.outputs.lair-version }}
 
-  build-lair-binaries:
-    permissions:
-      contents: write
-    needs: check-new-lair-releases
-    if: ${{ needs.check-new-lair-releases.outputs.lair-version }}
-    uses: ./.github/workflows/lair-binaries.yaml
-    with:
-      lair-version: ${{ needs.check-new-lair-releases.outputs.lair-version }}
+  # DISABLED: Only building holochain binaries now
+  # check-new-hc-releases:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - name: Check for new hc releases
+  #       id: check_releases
+  #       run: |
+  #         echo "hc_version=$(node ./scripts/check-new-hc-releases.mjs)" >> $GITHUB_OUTPUT
+  #   outputs:
+  #     hc-version: ${{ steps.check_releases.outputs.hc_version }}
 
-  check-new-hc-releases:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Check for new hc releases
-        id: check_releases
-        run: |
-          echo "hc_version=$(node ./scripts/check-new-hc-releases.mjs)" >> $GITHUB_OUTPUT
-    outputs:
-      hc-version: ${{ steps.check_releases.outputs.hc_version }}
+  # build-hc-binaries:
+  #   permissions:
+  #     contents: write
+  #   needs: check-new-hc-releases
+  #   if: ${{ needs.check-new-hc-releases.outputs.hc-version }}
+  #   uses: ./.github/workflows/hc-binaries.yaml
+  #   with:
+  #     hc-version: ${{ needs.check-new-hc-releases.outputs.hc-version }}
 
-  build-hc-binaries:
-    permissions:
-      contents: write
-    needs: check-new-hc-releases
-    if: ${{ needs.check-new-hc-releases.outputs.hc-version }}
-    uses: ./.github/workflows/hc-binaries.yaml
-    with:
-      hc-version: ${{ needs.check-new-hc-releases.outputs.hc-version }}
+  # DISABLED: Only building holochain binaries now
+  # check-new-kitsune2-bootstrap-srv-releases:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - name: Check for new kitsune2-bootstrap-srv releases
+  #       id: check_releases
+  #       run: |
+  #         echo "kitsune2_bootstrap_srv_version=$(node ./scripts/check-new-kitsune2-bootstrap-srv-releases.mjs)" >> $GITHUB_OUTPUT
+  #   outputs:
+  #     kitsune2-bootstrap-srv-version: ${{ steps.check_releases.outputs.kitsune2_bootstrap_srv_version }}
 
-  check-new-kitsune2-bootstrap-srv-releases:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Check for new kitsune2-bootstrap-srv releases
-        id: check_releases
-        run: |
-          echo "kitsune2_bootstrap_srv_version=$(node ./scripts/check-new-kitsune2-bootstrap-srv-releases.mjs)" >> $GITHUB_OUTPUT
-    outputs:
-      kitsune2-bootstrap-srv-version: ${{ steps.check_releases.outputs.kitsune2_bootstrap_srv_version }}
-
-  build-kitsune2-bootstrap-srv-binaries:
-    permissions:
-      contents: write
-    needs: check-new-kitsune2-bootstrap-srv-releases
-    if: ${{ needs.check-new-kitsune2-bootstrap-srv-releases.outputs.kitsune2-bootstrap-srv-version }}
-    uses: ./.github/workflows/kitsune2-bootstrap-srv-binaries.yaml
-    with:
-      kitsune2-bootstrap-srv-version: ${{ needs.check-new-kitsune2-bootstrap-srv-releases.outputs.kitsune2-bootstrap-srv-version }}
+  # build-kitsune2-bootstrap-srv-binaries:
+  #   permissions:
+  #     contents: write
+  #   needs: check-new-kitsune2-bootstrap-srv-releases
+  #   if: ${{ needs.check-new-kitsune2-bootstrap-srv-releases.outputs.kitsune2-bootstrap-srv-version }}
+  #   uses: ./.github/workflows/kitsune2-bootstrap-srv-binaries.yaml
+  #   with:
+  #     kitsune2-bootstrap-srv-version: ${{ needs.check-new-kitsune2-bootstrap-srv-releases.outputs.kitsune2-bootstrap-srv-version }}

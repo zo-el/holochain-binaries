@@ -1,4 +1,4 @@
-name: 'release-holochain-binaries'
+name: "release-holochain-binaries"
 on:
   workflow_call:
     inputs:
@@ -74,7 +74,7 @@ jobs:
       - id: create-release
         uses: ncipollo/release-action@v1
         with:
-          body: 'Holochain binaries for Linux/Windows/macOS.'
+          body: "Holochain binaries for Linux/Windows/macOS."
           prerelease: true
           skipIfReleaseExists: true
           tag: holochain-binaries-${{ inputs.holochain-version }}
@@ -85,20 +85,71 @@ jobs:
       - name: install Go stable
         uses: actions/setup-go@v4
         with:
-          go-version: 'stable'
+          go-version: "stable"
+
+      - name: Get patch commit hashes
+        id: get_hashes
+        run: |
+          if [[ "${{ matrix.platform }}" == "windows-2022" ]]; then
+            # PowerShell for Windows
+            $wasmerHash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86").object.sha.Substring(0,8)
+            echo "wasmer_hash=$wasmerHash" >> $env:GITHUB_OUTPUT
+            
+            $kitsune2Hash = (Invoke-RestMethod -Uri "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport").object.sha.Substring(0,8)
+            echo "kitsune2_hash=$kitsune2Hash" >> $env:GITHUB_OUTPUT
+            
+            echo "Wasmer hash: $wasmerHash"
+            echo "Kitsune2 hash: $kitsune2Hash"
+          else
+            # Bash for Unix systems
+            wasmer_hash=$(curl -s "https://api.github.com/repos/guillemcordoba/wasmer/git/refs/heads/fix-x86" | jq -r '.object.sha' | cut -c1-8)
+            echo "wasmer_hash=$wasmer_hash" >> $GITHUB_OUTPUT
+            
+            kitsune2_hash=$(curl -s "https://api.github.com/repos/guillemcordoba/kitsune2/git/refs/heads/iroh-transport" | jq -r '.object.sha' | cut -c1-8)
+            echo "kitsune2_hash=$kitsune2_hash" >> $GITHUB_OUTPUT
+            
+            echo "Wasmer hash: $wasmer_hash"
+            echo "Kitsune2 hash: $kitsune2_hash"
+          fi
+        shell: bash
 
       - name: setup binaries (x86_64-pc-windows-msvc)
         if: matrix.platform == 'windows-2022' && inputs.x86_64-pc-windows-msvc == true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          # Create a temporary Cargo.toml with patch dependencies
+          New-Item -ItemType Directory -Force -Path temp-holochain-build
+          Set-Location temp-holochain-build
+
+          @"
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          "@ | Out-File -FilePath Cargo.toml -Encoding utf8
+
+          cargo install --path . --bin holochain --locked
           $HcPath = Get-Command holochain | Select-Object -ExpandProperty Definition
-          Copy-Item $HcPath -Destination holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe
+          Copy-Item $HcPath -Destination ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe
+          Set-Location ..
 
-          CertUtil -hashfile "holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe" SHA256
+          CertUtil -hashfile "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe" SHA256
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-pc-windows-msvc.exe"
 
       - name: setup binaries (aarch64-apple-darwin)
         if: matrix.platform == 'macos-latest' && inputs.aarch64-apple-darwin == true
@@ -107,13 +158,38 @@ jobs:
         run: |
           rustup target add aarch64-apple-darwin
 
-          cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          # Create a temporary Cargo.toml with patch dependencies
+          mkdir temp-holochain-build
+          cd temp-holochain-build
+
+          cat > Cargo.toml << 'EOF'
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          EOF
+
+          cargo install --path . --bin holochain --target aarch64-apple-darwin --locked
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin
+          cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-apple-darwin"
 
       - name: setup binaries (x86_64-apple-darwin)
         if: matrix.platform == 'macos-13' && inputs.x86_64-apple-darwin == true
@@ -122,26 +198,76 @@ jobs:
         run: |
           rustup target add x86_64-apple-darwin
 
-          cargo install holochain --version ${{ inputs.holochain-version }} --target x86_64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          # Create a temporary Cargo.toml with patch dependencies
+          mkdir temp-holochain-build
+          cd temp-holochain-build
+
+          cat > Cargo.toml << 'EOF'
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          EOF
+
+          cargo install --path . --bin holochain --target x86_64-apple-darwin --locked
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin
+          cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-apple-darwin"
 
       - name: setup binaries (x86_64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.x86_64-unknown-linux-gnu == true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          # Create a temporary Cargo.toml with patch dependencies
+          mkdir temp-holochain-build
+          cd temp-holochain-build
+
+          cat > Cargo.toml << 'EOF'
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          EOF
+
+          cargo install --path . --bin holochain --locked
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
+          cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-x86_64-unknown-linux-gnu"
 
       - name: setup binaries (aarch64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.aarch64-unknown-linux-gnu == true
@@ -156,15 +282,40 @@ jobs:
           sudo apt install g++-aarch64-linux-gnu
 
           mkdir libsodium
-          curl -L --output ./libsodium/LATEST.tar.gz https://github.com/matthme/holochain-binaries/releases/download/libsodium-releases/LATEST.tar.gz
-          curl -L --output ./libsodium/LATEST.tar.gz.minisig https://github.com/matthme/holochain-binaries/releases/download/libsodium-releases/LATEST.tar.gz.minisig
-          curl -L --output ./libsodium/libsodium-1.0.19-stable.zip https://github.com/matthme/holochain-binaries/releases/download/libsodium-releases/libsodium-1.0.19-stable.zip
-          curl -L --output ./libsodium/libsodium-1.0.19-stable.zip.minisig https://github.com/matthme/holochain-binaries/releases/download/libsodium-releases/libsodium-1.0.19-stable.zip.minisig
+          curl -L --output ./libsodium/LATEST.tar.gz https://github.com/zo-el/holochain-binaries/releases/download/libsodium-releases/LATEST.tar.gz
+          curl -L --output ./libsodium/LATEST.tar.gz.minisig https://github.com/zo-el/holochain-binaries/releases/download/libsodium-releases/LATEST.tar.gz.minisig
+          curl -L --output ./libsodium/libsodium-1.0.19-stable.zip https://github.com/zo-el/holochain-binaries/releases/download/libsodium-releases/libsodium-1.0.19-stable.zip
+          curl -L --output ./libsodium/libsodium-1.0.19-stable.zip.minisig https://github.com/zo-el/holochain-binaries/releases/download/libsodium-releases/libsodium-1.0.19-stable.zip.minisig
 
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc SODIUM_DIST_DIR="$(pwd)/libsodium" cargo install holochain --version ${{ inputs.holochain-version }} --locked --target aarch64-unknown-linux-gnu --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
+          # Create a temporary Cargo.toml with patch dependencies
+          mkdir temp-holochain-build
+          cd temp-holochain-build
+
+          cat > Cargo.toml << 'EOF'
+          [package]
+          name = "temp-holochain-build"
+          version = "0.1.0"
+          edition = "2021"
+
+          [dependencies]
+          holochain = { version = "${{ inputs.holochain-version }}", default-features = false, features = ["sqlite-encrypted", "wasmer_sys", "backend-go-pion"] }
+
+          [patch.crates-io]
+          wasmer-vm = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          wasmer-types = { git = "https://github.com/guillemcordoba/wasmer", branch = "fix-x86" }
+          kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+          EOF
+
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc SODIUM_DIST_DIR="$(pwd)/../libsodium" cargo install --path . --bin holochain --target aarch64-unknown-linux-gnu --locked
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
+          cd ..
 
-          shasum -a 256 holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-w${{ steps.get_hashes.outputs.wasmer_hash }}-k${{ steps.get_hashes.outputs.kitsune2_hash }}-aarch64-unknown-linux-gnu"
