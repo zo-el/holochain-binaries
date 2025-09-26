@@ -258,12 +258,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --target x86_64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-x86_64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin
           cd ..
 
-          shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-x86_64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-apple-darwin"
 
       - name: setup binaries (x86_64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.x86_64-unknown-linux-gnu == true
@@ -297,12 +297,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu
           cd ..
 
-          shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-unknown-linux-gnu"
 
       - name: setup binaries (aarch64-unknown-linux-gnu)
         if: matrix.platform == 'ubuntu-22.04' && inputs.aarch64-unknown-linux-gnu == true
@@ -343,9 +343,9 @@ jobs:
           # Install holochain binary with patches applied (try simple approach first)
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-unknown-linux-gnu --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-aarch64-unknown-linux-gnu
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu
           cd ..
 
-          shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-aarch64-unknown-linux-gnu
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu
 
-          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-aarch64-unknown-linux-gnu"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-aarch64-unknown-linux-gnu"
