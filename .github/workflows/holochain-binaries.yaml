@@ -128,7 +128,7 @@ jobs:
       - name: Set version strings
         id: version
         run: |
-          echo "full_version=${{ inputs.holochain-version }}-wasmer-${{ steps.hashes.outputs.wasmer_hash }}-kitsune2-${{ steps.hashes.outputs.kitsune2_hash }}" >> $GITHUB_OUTPUT
+          echo "full_version=${{ inputs.holochain-version }}-wasmer-${{ steps.hashes.outputs.wasmer_hash }}-k2-${{ steps.hashes.outputs.kitsune2_hash }}" >> $GITHUB_OUTPUT
         shell: bash
 
       - id: create-release
@@ -176,12 +176,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           $HcPath = Get-Command holochain | Select-Object -ExpandProperty Definition
-          Copy-Item $HcPath -Destination ../holochain-v${{ steps.version.outputs.full_version }}-x86_64-pc-windows-msvc.exe
+          Copy-Item $HcPath -Destination ../holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe
           Set-Location ..
 
-          CertUtil -hashfile "holochain-v${{ steps.version.outputs.full_version }}-x86_64-pc-windows-msvc.exe" SHA256
+          CertUtil -hashfile "holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe" SHA256
 
-          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-x86_64-pc-windows-msvc.exe"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-x86_64-pc-windows-msvc.exe"
 
       - name: setup binaries (aarch64-apple-darwin)
         if: matrix.platform == 'macos-latest' && inputs.aarch64-apple-darwin == true
@@ -217,12 +217,12 @@ jobs:
           # Install holochain binary with patches applied
           cargo install holochain --version ${{ inputs.holochain-version }} --target aarch64-apple-darwin --locked --no-default-features --features sqlite-encrypted,wasmer_sys,backend-go-pion
           HOLOCHAIN_PATH=$(which holochain)
-          cp $HOLOCHAIN_PATH ../holochain-v${{ steps.version.outputs.full_version }}-aarch64-apple-darwin
+          cp $HOLOCHAIN_PATH ../holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin
           cd ..
 
-          shasum -a 256 holochain-v${{ steps.version.outputs.full_version }}-aarch64-apple-darwin
+          shasum -a 256 holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin
 
-          gh release upload "holochain-binaries-${{ steps.version.outputs.full_version }}" "holochain-v${{ steps.version.outputs.full_version }}-aarch64-apple-darwin"
+          gh release upload "holochain-binaries-${{ inputs.holochain-version }}" "holochain-v${{ inputs.holochain-version }}-aarch64-apple-darwin"
 
       - name: setup binaries (x86_64-apple-darwin)
         if: matrix.platform == 'macos-13' && inputs.x86_64-apple-darwin == true
